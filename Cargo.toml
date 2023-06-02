@@ -1,0 +1,14 @@
+[package]
+name = "dynamical-triangulations-3d"
+version = "0.1.0"
+edition = "2021"
+
+[profile.release]
+lto = true
+
+[dependencies]
+fastrand = "1.8.0"
+clap = { version = "3.2.23", features = ["derive"] }
+toml = "0.5.9"
+serde = "1.0.147"
+serde_derive = "1.0.147"

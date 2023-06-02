@@ -1,0 +1,7 @@
+/target
+analysis/__pycache__/
+/output
+flamegraph.svg
+perf.data
+perf.data.old
+slurm.txt

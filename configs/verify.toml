@@ -1,0 +1,16 @@
+[markov_chain]
+thermalisation = [200_000, 400_000, 800_000, 1_600_000, 3_200_000, 6_400_000]
+wait = [200, 400, 800, 1600, 3_200, 6_400]
+amount = 10_000
+observables = ["Volume", "DualGraphShell", "DualTreeShell", "VertexTreeShell", "VertexCount", "VertexDegree", "EdgeDegree", "EdgeFreq", "EdgeMiddle", "TriangleMiddle", "EdgeDetour", "TriangleFreq", "TriangleDetour"]
+[model]
+ensemble = "TripleTrees"
+volume = [200, 400, 800, 1_600, 3_200, 6_400]
+sigma = 10.0
+kappa_0 = [[-1.0, -0.8, -0.6, -0.4, -0.2, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0], [-1.0, -0.8, -0.6, -0.4, -0.2, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0], [-1.0, -0.8, -0.6, -0.4, -0.2, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0], [-1.0, -0.8, -0.6, -0.4, -0.2, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0], [-1.0, -0.8, -0.6, -0.4, -0.2, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0], [-1.0, -0.8, -0.6, -0.4, -0.2, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0]]
+
+[model.weights]
+shard = 1
+flip = 1
+vertex_tree = 1
+dual_tree = 1
