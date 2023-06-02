@@ -7,6 +7,8 @@ use std::{error::Error, fs, io::Write, path::Path, time};
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
+// test
+
 fn main() -> Result<()> {
     std::env::set_var("RUST_BACKTRACE", "1");
     println!();
