@@ -282,6 +282,7 @@ def write_data_frame(df, name):
 
 def get_peak_data(df):
     volumes = [200, 400, 800, 1600, 3200, 6400]
+    final_volumes = []
     kappas = []
     values = []
     
@@ -292,34 +293,35 @@ def get_peak_data(df):
         i_max = np.argmax(y_data)
 
         # make sure the peak is not on the boundary
-        assert 0 < i_max < len(x_data) - 1
+        if 0 < i_max < len(x_data) - 1:
         
-        # assign coordinates
-        x0 = x_data[i_max - 1]
-        x1 = x_data[i_max]
-        x2 = x_data[i_max + 1]
-        y0 = y_data[i_max - 1]
-        y1 = y_data[i_max]
-        y2 = y_data[i_max + 1]
+            # assign coordinates
+            x0 = x_data[i_max - 1]
+            x1 = x_data[i_max]
+            x2 = x_data[i_max + 1]
+            y0 = y_data[i_max - 1]
+            y1 = y_data[i_max]
+            y2 = y_data[i_max + 1]
 
-        # assign deltas
-        dx01 = x0 - x1
-        dx12 = x1 - x2
-        dx20 = x2 - x0
-        dy01 = y0 - y1
-        dy12 = y1 - y2
-        dy20 = y2 - y0
+            # assign deltas
+            dx01 = x0 - x1
+            dx12 = x1 - x2
+            dx20 = x2 - x0
+            dy01 = y0 - y1
+            dy12 = y1 - y2
+            dy20 = y2 - y0
 
-        # compute peak
-        temp = x0 * dy12 + x1 * dy20 + x2 * dy01
-        x = (x0 ** 2 * dy12 + x1 ** 2 * dy20 + x2 ** 2 * dy01) / (2 * temp)
-        y = y0 - (dy01 * dx20 ** 2 + dy20 * dx01 ** 2) ** 2 / (4 * dx01 * dx20 * dx12 * temp)
+            # compute peak
+            temp = x0 * dy12 + x1 * dy20 + x2 * dy01
+            x = (x0 ** 2 * dy12 + x1 ** 2 * dy20 + x2 ** 2 * dy01) / (2 * temp)
+            y = y0 - (dy01 * dx20 ** 2 + dy20 * dx01 ** 2) ** 2 / (4 * dx01 * dx20 * dx12 * temp)
 
-        # add to list
-        kappas.append(x)
-        values.append(y)
+            # add to list
+            kappas.append(x)
+            values.append(y)
+            final_volumes.append(volume)
 
-    return pd.DataFrame({"volume": volumes, "kappa": kappas, "value": values})
+    return pd.DataFrame({"volume": final_volumes, "kappa": kappas, "value": values})
 
 
 
