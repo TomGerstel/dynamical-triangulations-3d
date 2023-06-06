@@ -100,7 +100,7 @@ class DataSet:
             masked_data = np.where(data > 0, index_mask, 0)
             return np.max(masked_data, axis=1)
         else:
-            return np.zeros_like(data)
+            return data
     
     @staticmethod
     def _parity(data):

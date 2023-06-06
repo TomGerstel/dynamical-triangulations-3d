@@ -1,6 +1,7 @@
 /target
 analysis/__pycache__/
 /output
+/.vscode
 flamegraph.svg
 perf.data
 perf.data.old
