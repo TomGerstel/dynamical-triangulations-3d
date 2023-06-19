@@ -5,10 +5,11 @@ use std::{
     ops::{Index, IndexMut},
 };
 
-/// The Pool and Bag collections are inspired by Joren Brunekreef's work.
+/// The Shelf and Bag collections are heavily inspired by Joren Brunekreef's Shelf and Bag structures.
 /// See for example https://github.com/JorenB/2d-cdt
 ///
-/// The Link-Cut Tree implementation is based on an MIT lecture by Erik Demaine.
+/// The Link-Cut Tree implementation is based on a lecture by Erik Demaine of the MIT course Advanced Data Structures.
+/// This lecture is freely available on MIT OpenCourseWare.
 
 /// Label that is used for indexing into collections.
 pub struct Label<T> {
@@ -18,20 +19,20 @@ pub struct Label<T> {
 
 /// Collection with stable indices and O(1) time insert and remove operations. Can be indexed using `Label`.
 #[derive(Debug, Clone)]
-pub struct Pool<T> {
+pub struct Shelf<T> {
     elements: Box<[Element<T>]>,
     current_hole: usize,
     size: usize,
 }
 
-/// Iterator for the `Pool` collection.
+/// Iterator for the `Shelf` collection.
 #[derive(Debug)]
-pub struct PoolIter<'a, T> {
-    pool: &'a Pool<T>,
+pub struct ShelfIter<'a, T> {
+    shelf: &'a Shelf<T>,
     index: usize,
 }
 
-/// Collection of `Labels` referring to some `Pool`. Can be sampled from in O(1) time.
+/// Collection of `Labels` referring to some `Shelf`. Can be sampled from in O(1) time.
 #[derive(Debug, Clone)]
 pub struct Bag<T> {
     indices: Box<[Option<usize>]>,
@@ -97,10 +98,10 @@ impl<T> Label<T> {
     }
 }
 
-impl<T> Pool<T> {
-    /// Construct a `Pool` with a given `capacity`.
+impl<T> Shelf<T> {
+    /// Construct a `Shelf` with a given `capacity`.
     pub fn with_capacity(capacity: usize) -> Self {
-        Pool {
+        Shelf {
             elements: (0..capacity).map(|i| Element::Hole(i + 1)).collect(),
             current_hole: 0,
             size: 0,
@@ -110,7 +111,7 @@ impl<T> Pool<T> {
     /// Insert an `object`, and return its `Label`.
     pub fn insert(&mut self, object: T) -> Label<T> {
         let label = self.current_hole;
-        debug_assert_ne!(label, self.elements.len(), "Pool is full!");
+        debug_assert_ne!(label, self.elements.len(), "Shelf is full!");
         if let Element::Hole(next) = self.elements[label] {
             self.elements[label] = Element::Object(object);
             self.current_hole = next;
@@ -139,17 +140,17 @@ impl<T> Pool<T> {
         }
     }
 
-    /// Return the total number of objects in the `Pool`.
+    /// Return the total number of objects in the `Shelf`.
     pub fn size(&self) -> usize {
         self.size
     }
 
-    /// Return the maximum `capacity` of the `Pool`.
+    /// Return the maximum `capacity` of the `Shelf`.
     pub fn capacity(&self) -> usize {
         self.elements.len()
     }
 
-    /// Check if the `Pool` contains an object with a given `Label`.
+    /// Check if the `Shelf` contains an object with a given `Label`.
     pub fn contains(&self, label: Label<T>) -> bool {
         match self.elements[label.value] {
             Element::Object(_) => true,
@@ -456,7 +457,7 @@ pub trait LinkCutTree<T> {
     } */
 }
 
-impl<T> LinkCutTree<T> for Pool<Node<T>> {
+impl<T> LinkCutTree<T> for Shelf<Node<T>> {
     fn get_node(&self, label: NodeLabel<T>) -> &Node<T> {
         &self[label]
     }
@@ -516,25 +517,25 @@ impl<T> Bag<T> {
     }
 }
 
-impl<'a, T> IntoIterator for &'a Pool<T> {
+impl<'a, T> IntoIterator for &'a Shelf<T> {
     type Item = Label<T>;
-    type IntoIter = PoolIter<'a, T>;
+    type IntoIter = ShelfIter<'a, T>;
 
     fn into_iter(self) -> Self::IntoIter {
-        PoolIter {
-            pool: self,
+        ShelfIter {
+            shelf: self,
             index: 0,
         }
     }
 }
 
-impl<'a, T> Iterator for PoolIter<'a, T> {
+impl<'a, T> Iterator for ShelfIter<'a, T> {
     type Item = Label<T>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let size = self.pool.elements.len();
+        let size = self.shelf.elements.len();
         for i in self.index..size {
-            match self.pool.elements[i] {
+            match self.shelf.elements[i] {
                 Element::Object(_) => {
                     self.index = i + 1;
                     return Some(Label::new(i));
@@ -546,7 +547,7 @@ impl<'a, T> Iterator for PoolIter<'a, T> {
     }
 }
 
-impl<T> Index<Label<T>> for Pool<T> {
+impl<T> Index<Label<T>> for Shelf<T> {
     type Output = T;
 
     fn index(&self, label: Label<T>) -> &Self::Output {
@@ -569,7 +570,7 @@ impl<T> Index<bool> for Children<T> {
     }
 }
 
-impl<T> IndexMut<Label<T>> for Pool<T> {
+impl<T> IndexMut<Label<T>> for Shelf<T> {
     fn index_mut(&mut self, label: Label<T>) -> &mut Self::Output {
         match &mut self.elements[label.value] {
             Element::Object(object) => object,
@@ -650,7 +651,7 @@ impl<T> fmt::Display for Label<T> {
     }
 }
 
-impl<T: fmt::Display> fmt::Display for Pool<T> {
+impl<T: fmt::Display> fmt::Display for Shelf<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.elements
             .iter()
@@ -678,7 +679,7 @@ impl<T: fmt::Display> fmt::Display for Bag<T> {
     }
 }
 
-impl<T: Copy> fmt::Display for Pool<Node<T>> {
+impl<T: Copy> fmt::Display for Shelf<Node<T>> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let forest = NaiveForest::from(self);
         write!(f, "{forest}")
@@ -761,8 +762,8 @@ impl<T> Ord for Label<T> {
     }
 }
 
-impl<T: Clone> From<&Pool<Node<T>>> for NaiveForest {
-    fn from(value: &Pool<Node<T>>) -> Self {
+impl<T: Clone> From<&Shelf<Node<T>>> for NaiveForest {
+    fn from(value: &Shelf<Node<T>>) -> Self {
         let mut forest = value.clone();
         let labels = value.into_iter().collect::<Vec<_>>();
         let mut nodes = vec![Vec::<usize>::new(); value.capacity()];
@@ -787,11 +788,11 @@ mod tests {
 
     #[test]
     fn it_works() {
-        // create pool with capacity 1
-        let mut pool = Pool::with_capacity(1);
-        assert_eq!(pool.elements[0], Element::Hole(1));
-        assert_eq!(pool.current_hole, 0);
-        assert_eq!(pool.size, 0);
+        // create shelf with capacity 1
+        let mut shelf = Shelf::with_capacity(1);
+        assert_eq!(shelf.elements[0], Element::Hole(1));
+        assert_eq!(shelf.current_hole, 0);
+        assert_eq!(shelf.size, 0);
 
         // create bag with capacity 1
         let mut bag = Bag::with_capacity(1);
@@ -799,12 +800,12 @@ mod tests {
         assert_eq!(bag.labels[0], None);
         assert_eq!(bag.size, 0);
 
-        // insert object into pool
-        let label = pool.insert(Foo);
-        assert_eq!(pool.elements[0], Element::Object(Foo));
-        assert_eq!(pool.current_hole, 1);
-        assert_eq!(pool.size, 1);
-        assert!(pool.contains(label));
+        // insert object into shelf
+        let label = shelf.insert(Foo);
+        assert_eq!(shelf.elements[0], Element::Object(Foo));
+        assert_eq!(shelf.current_hole, 1);
+        assert_eq!(shelf.size, 1);
+        assert!(shelf.contains(label));
 
         // insert label into bag
         bag.insert(label);
@@ -820,24 +821,24 @@ mod tests {
         assert_eq!(bag.size, 0);
         assert!(!bag.contains(label));
 
-        // remove object from pool
-        pool.remove(label);
-        assert_eq!(pool.elements[0], Element::Hole(1));
-        assert_eq!(pool.current_hole, 0);
-        assert_eq!(pool.size, 0);
-        assert!(!pool.contains(label));
+        // remove object from shelf
+        shelf.remove(label);
+        assert_eq!(shelf.elements[0], Element::Hole(1));
+        assert_eq!(shelf.current_hole, 0);
+        assert_eq!(shelf.size, 0);
+        assert!(!shelf.contains(label));
     }
 
     #[test]
     fn insert_remove() {
-        // create pool and bag
-        let mut pool = Pool::with_capacity(3);
+        // create shelf and bag
+        let mut shelf = Shelf::with_capacity(3);
         let mut bag = Bag::with_capacity(3);
 
-        // insert 3 objects into pool
-        let label1 = pool.insert(Foo);
-        let label2 = pool.insert(Foo);
-        let label3 = pool.insert(Foo);
+        // insert 3 objects into shelf
+        let label1 = shelf.insert(Foo);
+        let label2 = shelf.insert(Foo);
+        let label3 = shelf.insert(Foo);
 
         // insert 3 labels into bag
         bag.insert(label1);
@@ -857,52 +858,52 @@ mod tests {
         assert!(!bag.contains(label2));
         assert!(bag.contains(label3));
 
-        // remove second object from pool
-        pool.remove(label2);
-        assert_eq!(pool.elements[1], Element::Hole(3));
-        assert_eq!(pool.current_hole, 1);
-        assert_eq!(pool.size, 2);
-        assert!(pool.contains(label1));
-        assert!(!pool.contains(label2));
-        assert!(pool.contains(label3));
+        // remove second object from shelf
+        shelf.remove(label2);
+        assert_eq!(shelf.elements[1], Element::Hole(3));
+        assert_eq!(shelf.current_hole, 1);
+        assert_eq!(shelf.size, 2);
+        assert!(shelf.contains(label1));
+        assert!(!shelf.contains(label2));
+        assert!(shelf.contains(label3));
     }
 
     #[test]
     #[should_panic]
-    fn pool_cap() {
-        let mut pool = Pool::with_capacity(1);
-        let _ = pool.insert(Foo);
-        let _ = pool.insert(Foo);
+    fn shelf_cap() {
+        let mut shelf = Shelf::with_capacity(1);
+        let _ = shelf.insert(Foo);
+        let _ = shelf.insert(Foo);
     }
 
     #[test]
     #[should_panic]
     fn bag_cap() {
-        let mut pool = Pool::with_capacity(2);
+        let mut shelf = Shelf::with_capacity(2);
         let mut bag = Bag::with_capacity(1);
-        let label1 = pool.insert(Foo);
-        let label2 = pool.insert(Foo);
+        let label1 = shelf.insert(Foo);
+        let label2 = shelf.insert(Foo);
         bag.insert(label1);
         bag.insert(label2);
     }
 
     #[test]
-    fn pool_iter() {
-        let mut pool = Pool::with_capacity(3);
-        let label1 = pool.insert(Foo);
-        let label2 = pool.insert(Foo);
-        let label3 = pool.insert(Foo);
-        pool.remove(label2);
+    fn shelf_iter() {
+        let mut shelf = Shelf::with_capacity(3);
+        let label1 = shelf.insert(Foo);
+        let label2 = shelf.insert(Foo);
+        let label3 = shelf.insert(Foo);
+        shelf.remove(label2);
 
-        let mut pool_iter = pool.into_iter();
-        assert_eq!(pool_iter.next(), Some(label1));
-        assert_eq!(pool_iter.next(), Some(label3));
-        assert_eq!(pool_iter.next(), None);
+        let mut shelf_iter = shelf.into_iter();
+        assert_eq!(shelf_iter.next(), Some(label1));
+        assert_eq!(shelf_iter.next(), Some(label3));
+        assert_eq!(shelf_iter.next(), None);
     }
 
     #[test]
     fn tree_works() {
-        let mut lct = Pool::with_capacity(1);
+        let mut lct = Shelf::with_capacity(1);
         let v = lct.add_node(());
         lct.splay(v);
         lct.expose(v);
@@ -910,7 +911,7 @@ mod tests {
 
     #[test]
     fn rotate_basic() {
-        let mut lct = Pool::with_capacity(2);
+        let mut lct = Shelf::with_capacity(2);
 
         // define nodes
         let o = lct.add_node("node");
@@ -943,7 +944,7 @@ mod tests {
 
     #[test]
     fn rotate_attachments() {
-        let mut lct = Pool::with_capacity(7);
+        let mut lct = Shelf::with_capacity(7);
 
         // define nodes
         let o = lct.add_node("node");
@@ -1044,7 +1045,7 @@ mod tests {
 
     #[test]
     fn expose_line() {
-        let mut lct = Pool::with_capacity(5);
+        let mut lct = Shelf::with_capacity(5);
 
         // define nodes
         let n0 = lct.add_node("0");
@@ -1078,7 +1079,7 @@ mod tests {
 
     #[test]
     fn find_root() {
-        let mut lct = Pool::with_capacity(7);
+        let mut lct = Shelf::with_capacity(7);
 
         // define nodes
         let o = lct.add_node("node");
@@ -1124,7 +1125,7 @@ mod tests {
 
     #[test]
     fn link_cut() {
-        let mut lct = Pool::with_capacity(2);
+        let mut lct = Shelf::with_capacity(2);
 
         // define nodes
         let a = lct.add_node("a");
@@ -1139,7 +1140,7 @@ mod tests {
 
     #[test]
     fn evert_find_root() {
-        let mut lct = Pool::with_capacity(5);
+        let mut lct = Shelf::with_capacity(5);
 
         // define nodes
         let n0 = lct.add_node("0");
@@ -1188,7 +1189,7 @@ mod tests {
     #[test]
     fn splay_depth() {
         // create lct
-        let mut lct = Pool::with_capacity(3);
+        let mut lct = Shelf::with_capacity(3);
         let a = lct.add_node("a");
         let b = lct.add_node("b");
         let c = lct.add_node("c");
@@ -1209,7 +1210,7 @@ mod tests {
     #[test]
     fn expose_depth() {
         // create lct
-        let mut lct = Pool::with_capacity(3);
+        let mut lct = Shelf::with_capacity(3);
         let a = lct.add_node("a");
         let b = lct.add_node("b");
         let c = lct.add_node("c");
@@ -1297,7 +1298,7 @@ mod tests {
     }
 
     fn reattach<T: fmt::Debug>(
-        lct: &mut Pool<Node<T>>,
+        lct: &mut Shelf<Node<T>>,
         label1: NodeLabel<T>,
         label2: NodeLabel<T>,
         index: usize,
@@ -1342,8 +1343,8 @@ mod tests {
         }
     }
 
-    fn linear_lct(size: usize) -> (Pool<Node<usize>>, Vec<Label<Node<usize>>>) {
-        let mut lct = Pool::with_capacity(size);
+    fn linear_lct(size: usize) -> (Shelf<Node<usize>>, Vec<Label<Node<usize>>>) {
+        let mut lct = Shelf::with_capacity(size);
         let labels = (0..size)
             .map(|i| lct.add_node(i))
             .collect::<Vec<Label<Node<usize>>>>();

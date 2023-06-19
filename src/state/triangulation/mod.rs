@@ -4,7 +4,7 @@ pub use data_structs::Label;
 
 use crate::{state::graph::Graph, state::Outcome, Ensemble};
 
-use data_structs::{Bag, LinkCutTree, Node, Pool};
+use data_structs::{Bag, LinkCutTree, Node, Shelf};
 use serde_derive::{Deserialize, Serialize};
 use std::{
     fmt,
@@ -14,11 +14,11 @@ use std::{
 /// Structure containing the current state of the geometry.
 #[derive(Debug, Clone)]
 pub struct Triangulation {
-    vertices: Pool<Vertex>,
-    edges: Pool<Edge>,
-    triangles: Pool<Triangle>,
-    tets: Pool<Tetrahedron>,
-    forest: Pool<Node<Simplex>>,
+    vertices: Shelf<Vertex>,
+    edges: Shelf<Edge>,
+    triangles: Shelf<Triangle>,
+    tets: Shelf<Tetrahedron>,
+    forest: Shelf<Node<Simplex>>,
     tet_bag: Bag<Tetrahedron>,
     middle_edges: Bag<Edge>,
     middle_triangles: Bag<Triangle>,
@@ -120,11 +120,11 @@ fn freqdist<T: PartialEq>(data: Vec<T>) -> Vec<usize> {
 impl Triangulation {
     pub fn new(volume: usize, ensemble: Ensemble) -> Self {
         // initialise triangulation struct and fields
-        let vertices = Pool::<Vertex>::with_capacity(2 * volume + 1);
-        let edges = Pool::<Edge>::with_capacity(4 * volume + 1);
-        let triangles = Pool::<Triangle>::with_capacity(8 * volume + 1);
-        let tets = Pool::<Tetrahedron>::with_capacity(2 * volume + 1);
-        let forest = Pool::<Node<Simplex>>::with_capacity(16 * volume + 4);
+        let vertices = Shelf::<Vertex>::with_capacity(2 * volume + 1);
+        let edges = Shelf::<Edge>::with_capacity(4 * volume + 1);
+        let triangles = Shelf::<Triangle>::with_capacity(8 * volume + 1);
+        let tets = Shelf::<Tetrahedron>::with_capacity(2 * volume + 1);
+        let forest = Shelf::<Node<Simplex>>::with_capacity(16 * volume + 4);
         let tet_bag = Bag::with_capacity(2 * volume + 1);
         let middle_edges = Bag::with_capacity(4 * volume + 1);
         let middle_triangles = Bag::with_capacity(8 * volume + 1);
@@ -924,11 +924,11 @@ impl Triangulation {
         self.forest.cut(e);
     }
 
-    pub fn tets(&self) -> &Pool<Tetrahedron> {
+    pub fn tets(&self) -> &Shelf<Tetrahedron> {
         &self.tets
     }
 
-    pub fn tets_mut(&mut self) -> &mut Pool<Tetrahedron> {
+    pub fn tets_mut(&mut self) -> &mut Shelf<Tetrahedron> {
         &mut self.tets
     }
 
@@ -1240,7 +1240,7 @@ impl Edge {
     }
 }
 
-impl Pool<Tetrahedron> {
+impl Shelf<Tetrahedron> {
     pub fn glue_triangles(&mut self, a: Mouse, b: Mouse) {
         self[a] = b;
         self[a.next()] = b.next().next();
@@ -1376,11 +1376,11 @@ impl Mouse {
         }
     }
 
-    pub fn adj_ext(&self, tets: &Pool<Tetrahedron>) -> Self {
+    pub fn adj_ext(&self, tets: &Shelf<Tetrahedron>) -> Self {
         tets[*self]
     }
 
-    pub fn tail(&self, tets: &Pool<Tetrahedron>) -> Label<Vertex> {
+    pub fn tail(&self, tets: &Shelf<Tetrahedron>) -> Label<Vertex> {
         match self.half_edge {
             HalfEdge::Zero => tets[self.tet].vertices[0],
             HalfEdge::One => tets[self.tet].vertices[1],
@@ -1397,7 +1397,7 @@ impl Mouse {
         }
     }
 
-    pub fn head(&self, tets: &Pool<Tetrahedron>) -> Label<Vertex> {
+    pub fn head(&self, tets: &Shelf<Tetrahedron>) -> Label<Vertex> {
         match self.half_edge {
             HalfEdge::Zero => tets[self.tet].vertices[1],
             HalfEdge::One => tets[self.tet].vertices[2],
@@ -1414,7 +1414,7 @@ impl Mouse {
         }
     }
 
-    pub fn edge(&self, tets: &Pool<Tetrahedron>) -> Label<Edge> {
+    pub fn edge(&self, tets: &Shelf<Tetrahedron>) -> Label<Edge> {
         match self.half_edge {
             HalfEdge::Zero => tets[self.tet].edges[0],
             HalfEdge::One => tets[self.tet].edges[1],
@@ -1431,7 +1431,7 @@ impl Mouse {
         }
     }
 
-    pub fn triangle(&self, tets: &Pool<Tetrahedron>) -> Label<Triangle> {
+    pub fn triangle(&self, tets: &Shelf<Tetrahedron>) -> Label<Triangle> {
         match self.half_edge {
             HalfEdge::Zero => tets[self.tet].triangles[0],
             HalfEdge::One => tets[self.tet].triangles[0],
@@ -1576,14 +1576,14 @@ impl Observable {
     }
 }
 
-impl Index<Mouse> for Pool<Tetrahedron> {
+impl Index<Mouse> for Shelf<Tetrahedron> {
     type Output = Mouse;
     fn index(&self, mouse: Mouse) -> &Self::Output {
         &self[mouse.tet].adj[mouse.half_edge as usize]
     }
 }
 
-impl IndexMut<Mouse> for Pool<Tetrahedron> {
+impl IndexMut<Mouse> for Shelf<Tetrahedron> {
     fn index_mut(&mut self, mouse: Mouse) -> &mut Self::Output {
         &mut self[mouse.tet].adj[mouse.half_edge as usize]
     }
