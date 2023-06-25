@@ -56,7 +56,7 @@ class DataSet:
     @classmethod
     def _read_vec_data(cls, path):
         # read data and find max number of columns
-        with open(path, 'r') as file:
+        with open(path, "r") as file:
             datareader = csv.reader(file)
             data = []
             max_cols = 0
@@ -69,7 +69,7 @@ class DataSet:
         for i in range(len(data)):
             row = data[i]
             row = np.array(row, dtype=int)
-            row = np.pad(row, (0, max_cols - len(row)), 'constant')
+            row = np.pad(row, (0, max_cols - len(row)), "constant")
             data[i] = row
 
         # convert to numpy array
@@ -101,7 +101,7 @@ class DataSet:
             return np.max(masked_data, axis=1)
         else:
             return data
-    
+
     @staticmethod
     def _parity(data):
         if len(np.shape(data)) == 2:
@@ -139,7 +139,6 @@ class DataSet:
 
     @staticmethod
     def _compute(data, observable):
-
         if observable == "mean":
             return np.mean(data)
         elif observable == "std":
@@ -147,13 +146,12 @@ class DataSet:
         elif observable == "tcorr":
             return _tcorr(data)
 
-        
     def observe(self, observable):
         data = self.data
         settings = self.settings
         value = self._compute(data, observable)
         return DataPoint(value, 0.0, settings)
-    
+
     def histogram(self):
         data = self.data
         settings = self.settings
@@ -167,7 +165,6 @@ class DataSet:
         return DataHist(hist, settings)
 
 
-
 class DataPoint:
     value: float
     error: float
@@ -177,6 +174,7 @@ class DataPoint:
         self.value = value
         self.error = error
         self.settings = settings
+
 
 class DataHist:
     hist: np.ndarray
@@ -188,7 +186,6 @@ class DataHist:
 
 
 def correlation_analysis(series):
-
     # plot the trace
     plt.plot(series)
     plt.title("Trace")
@@ -201,21 +198,21 @@ def correlation_analysis(series):
     plt.plot(autocov)
     plt.xlim((0, 3 * tau))
     plt.ylim((0, 1))
-    plt.axhline(np.exp(-1.), linestyle='--')
+    plt.axhline(np.exp(-1.0), linestyle="--")
     plt.title("Autocovariance")
     plt.xlabel(r"$\tau$")
     plt.ylabel(
-        r"$\langle (x(t) - \langle x \rangle) (x(t + \tau) - \langle x \rangle) \rangle / \sigma^2$")
+        r"$\langle (x(t) - \langle x \rangle) (x(t + \tau) - \langle x \rangle) \rangle / \sigma^2$"
+    )
     plt.show()
 
 
 def _autocov(data):
     tmax = np.size(data)
     delta = data - np.mean(data)
-    autocov = np.array([
-        np.dot(delta[:(tmax - t)], delta[t:]) / (tmax - t)
-        for t in range(tmax)
-    ])
+    autocov = np.array(
+        [np.dot(delta[: (tmax - t)], delta[t:]) / (tmax - t) for t in range(tmax)]
+    )
 
     # normalise
     if autocov[0] == 0.0:
@@ -233,8 +230,8 @@ def _tcorr(data):
         tcorr = 1
     return tcorr
 
+
 def process_volume_kappa(data):
-    
     # load the data into usable arrays
     values = np.empty_like(data, dtype=float)
     errors = np.empty_like(data, dtype=float)
@@ -253,9 +250,8 @@ def process_volume_kappa(data):
     # define data frame
     df = pd.DataFrame()
 
-    # add each volume to the dataframe 
+    # add each volume to the dataframe
     for volume in labels:
-
         # filter the data
         mask = volumes == volume
         x = kappas[mask]
@@ -275,17 +271,91 @@ def process_volume_kappa(data):
 
     return df
 
+
 def write_data_frame(df, name):
     root = os.getcwd()
     path = os.path.join(root, "plots", name + ".csv")
     df.to_csv(path, index=False)
 
+
+def read_data_frame(name):
+    root = os.getcwd()
+    path = os.path.join(root, "plots", name + ".csv")
+    return pd.read_csv(path)
+
+
+def get_peak_data(df, n):
+    peak_x_values = []
+    peak_x_errors = []
+    peak_y_values = []
+    peak_y_errors = []
+
+    volumes = [200, 400, 800, 1600, 3200, 6400]
+    for volume in volumes:
+        kappas = df["kappa_" + str(volume)].to_numpy()
+        values = df["value_" + str(volume)].to_numpy()
+        errors = df["error_" + str(volume)].to_numpy()
+
+        peak_x = []
+        peak_y = []
+        for i in range(n):
+            samples = np.random.normal(values, errors)
+            i_max = np.argmax(samples)
+
+            # make sure the peak is not on the boundary
+            if 0 < i_max < len(kappas) - 1:
+                # assign coordinates
+                x0 = kappas[i_max - 1]
+                x1 = kappas[i_max]
+                x2 = kappas[i_max + 1]
+                y0 = samples[i_max - 1]
+                y1 = samples[i_max]
+                y2 = samples[i_max + 1]
+
+                # assign deltas
+                dx01 = x0 - x1
+                dx12 = x1 - x2
+                dx20 = x2 - x0
+                dy01 = y0 - y1
+                dy12 = y1 - y2
+                dy20 = y2 - y0
+
+                # compute peak
+                temp = x0 * dy12 + x1 * dy20 + x2 * dy01
+                x = (x0**2 * dy12 + x1**2 * dy20 + x2**2 * dy01) / (2 * temp)
+                y = y0 - (dy01 * dx20**2 + dy20 * dx01**2) ** 2 / (
+                    4 * dx01 * dx20 * dx12 * temp
+                )
+            else:
+                raise ValueError
+                x = np.nan
+                y = np.nan
+
+            # add to list
+            peak_x.append(x)
+            peak_y.append(y)
+        peak_x_values.append(np.mean(peak_x))
+        peak_x_errors.append(np.std(peak_x, ddof=1.0))
+        peak_y_values.append(np.mean(peak_y))
+        peak_y_errors.append(np.std(peak_y, ddof=1.0))
+
+    return pd.DataFrame(
+        {
+            "volume": volumes,
+            "kappa": peak_x_values,
+            "kappa_error": peak_x_errors,
+            "value": peak_y_values,
+            "value_error": peak_y_errors,
+        }
+    )
+
+
+"""
 def get_peak_data(df):
     volumes = [200, 400, 800, 1600, 3200, 6400]
     final_volumes = []
     kappas = []
     values = []
-    
 
     for volume in volumes:
         x_data = df["kappa_" + str(volume)].to_numpy()
@@ -294,7 +364,6 @@ def get_peak_data(df):
 
         # make sure the peak is not on the boundary
         if 0 < i_max < len(x_data) - 1:
-        
             # assign coordinates
             x0 = x_data[i_max - 1]
             x1 = x_data[i_max]
@@ -313,8 +382,10 @@ def get_peak_data(df):
 
             # compute peak
             temp = x0 * dy12 + x1 * dy20 + x2 * dy01
-            x = (x0 ** 2 * dy12 + x1 ** 2 * dy20 + x2 ** 2 * dy01) / (2 * temp)
-            y = y0 - (dy01 * dx20 ** 2 + dy20 * dx01 ** 2) ** 2 / (4 * dx01 * dx20 * dx12 * temp)
+            x = (x0**2 * dy12 + x1**2 * dy20 + x2**2 * dy01) / (2 * temp)
+            y = y0 - (dy01 * dx20**2 + dy20 * dx01**2) ** 2 / (
+                4 * dx01 * dx20 * dx12 * temp
+            )
 
             # add to list
             kappas.append(x)
@@ -322,21 +393,19 @@ def get_peak_data(df):
             final_volumes.append(volume)
 
     return pd.DataFrame({"volume": final_volumes, "kappa": kappas, "value": values})
-
+"""
 
 
 def volume_kappa_plot(df, exponent, invert_cmap=True, sigma=1.0, title=""):
-
     # prepare some plotting variables
     fig, ax = plt.subplots(1)
-    cmap = cm.get_cmap('viridis')
+    cmap = cm.get_cmap("viridis")
     volumes = [200, 400, 800, 1600, 3200, 6400]
 
     # plot each volume line
     for volume in volumes:
-
         # scale the data
-        norm = volume ** exponent
+        norm = volume**exponent
         x = df["kappa_" + str(volume)].to_numpy()
         y = df["value_" + str(volume)].to_numpy() / norm
         yerr = sigma * df["error_" + str(volume)].to_numpy() / norm
@@ -349,21 +418,22 @@ def volume_kappa_plot(df, exponent, invert_cmap=True, sigma=1.0, title=""):
             cmap_index = depth
         depth = np.floor(depth * 1000)
 
-        # plot 
+        # plot
         ax.errorbar(x, y, yerr=yerr, label=str(volume), color=cmap(cmap_index))
 
     # deduplicate legend
     ax.legend(
-        *[*zip(*{l: h for h, l in zip(*ax.get_legend_handles_labels())}.items())][::-1])
-    
+        *[*zip(*{l: h for h, l in zip(*ax.get_legend_handles_labels())}.items())][::-1]
+    )
+
     # title and axis labels
     plt.title(rf"{title} ($\nu = {exponent}$)")
     plt.xlabel(r"$\kappa$")
     plt.ylabel(r"$\mathcal{O} N_3^{-\nu}$")
     plt.show()
 
-def hist_plot(data, volume, xmax, yscale, invert_cmap=True, title=""):
 
+def hist_plot(data, volume, xmax, yscale, invert_cmap=True, title=""):
     hist_list = np.empty_like(data, dtype=np.ndarray)
     kappas = np.empty_like(data, dtype=float)
     volumes = np.empty_like(data, dtype=int)
@@ -378,9 +448,8 @@ def hist_plot(data, volume, xmax, yscale, invert_cmap=True, title=""):
 
     # prepare some plotting variables
     fig, ax = plt.subplots(1)
-    cmap = cm.get_cmap('viridis')
+    cmap = cm.get_cmap("viridis")
 
-    
     for i in range(len(data)):
         if mask[i]:
             kappa = data[i].settings.kappa
@@ -403,7 +472,6 @@ def hist_plot(data, volume, xmax, yscale, invert_cmap=True, title=""):
             # plot
             plt.fill_between(x, y, y2=kappa, color=cmap(cmap_index), zorder=depth)
             plt.hlines(kappa, 0, volume, colors=[cmap(cmap_index)], zorder=depth)
-            
 
     # title and axis labels
     plt.title(f"{title} (N3 = {volume})")
