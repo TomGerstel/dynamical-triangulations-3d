@@ -19,6 +19,8 @@ target/release/dynamical-triangulations-3d -- test 0 1
 ```
 This should run a simulation using the `test.toml` config, indexed by `0` and `1`.
 
+NOTE: Before running the first simulation, make sure to create a directory named `output` in the root directory. Not doing this will result in an I/O error. 
+
 ## Config Files
 
 To run a simulation, you need to provide a config file in the `configs` directory. Several config files are provided as examples. Here is the `test.toml` file from the previous example:
