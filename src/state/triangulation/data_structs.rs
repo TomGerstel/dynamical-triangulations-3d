@@ -316,14 +316,14 @@ pub trait LinkCutTree<T> {
 
         // connect the current preferred child as a path child
         if let Some(x) = self.get_node(p).children[u_side] {
-            let mut x_node = &mut self.get_node_mut(x);
+            let x_node = self.get_node_mut(x);
             x_node.parent = Parent::Path { parent: p };
             x_node.d_flip ^= d_flip;
         }
 
         // make u the new preferred child (if it exists)
         if let Some(u) = u_opt {
-            let mut u_node = self.get_node_mut(u);
+            let u_node = self.get_node_mut(u);
             u_node.parent = Parent::BinTree {
                 parent: p,
                 side: u_side,
@@ -389,7 +389,7 @@ pub trait LinkCutTree<T> {
         };
 
         // update node
-        let mut u_node = self.get_node_mut(u);
+        let u_node = self.get_node_mut(u);
         u_node.parent = p_parent;
         u_node.children[x_side] = Some(p);
         u_node.d_flip ^= p_d_flip;
@@ -400,7 +400,7 @@ pub trait LinkCutTree<T> {
         };
 
         // update parent
-        let mut p_node = self.get_node_mut(p);
+        let p_node = self.get_node_mut(p);
         p_node.parent = Parent::BinTree {
             parent: u,
             side: x_side,
@@ -411,7 +411,7 @@ pub trait LinkCutTree<T> {
 
         // move the middle subtree to its new parent
         if let Some(x) = x_opt {
-            let mut x_node = self.get_node_mut(x);
+            let x_node = self.get_node_mut(x);
             x_node.d_depth = x_node.d_depth.abs_diff(u_d_depth);
             x_node.d_flip ^= u_d_flip;
             x_node.parent = Parent::BinTree {
